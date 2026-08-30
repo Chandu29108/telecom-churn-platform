@@ -1,0 +1,31 @@
+# --- Secrets --------------------------------------------------------------
+# Real .env files must never be committed — only .env.example. If backend/.env
+# is already tracked from a previous commit, see the note in the setup guide
+# for how to remove it from git history, not just stop tracking it going
+# forward.
+.env
+.env.local
+.env.*.local
+
+# --- Backend (Python) ------------------------------------------------------
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.db
+*.sqlite3
+backend/storage/
+.venv/
+venv/
+*.egg-info/
+
+# --- Frontend (Node) ---------------------------------------------------
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# --- Editors / OS -----------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,111 @@
+name: CI
+
+# Runs on every push and every pull request targeting main. This is the
+# Phase 2 fix from the production-readiness audit: nothing previously
+# stopped a broken build, a failing test, or a leaked secret from reaching
+# main — this pipeline is that gate. Free and unlimited on a public repo.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    name: Backend tests (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      # Same values conftest.py already falls back to for local runs —
+      # kept explicit here so CI's behavior doesn't silently depend on
+      # conftest.py's defaults changing later.
+      DATABASE_URL: "sqlite:///./ci_test.db"
+      ENVIRONMENT: "test"
+      EMAIL_PROVIDER: "console"
+      SECRET_KEY: "ci-test-secret-not-for-production"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: backend/requirements*.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run test suite
+        run: python -m pytest -q
+
+  dependency-audit:
+    name: Dependency vulnerability scan (pip-audit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      # Informational for now (won't fail the build) — Phase 4 of the
+      # roadmap bumps the currently-known-vulnerable packages (fastapi/
+      # starlette, python-jose, python-multipart). Once that's done,
+      # remove `continue-on-error: true` below so this job starts
+      # actually blocking merges on new vulnerabilities, same as the
+      # test job above.
+      - name: Audit dependencies
+        continue-on-error: true
+        run: pip-audit -r requirements.txt
+
+  frontend-build:
+    name: Frontend build + npm audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: "https://placeholder-for-ci-build.example.com"
+
+      # Informational for now, same reasoning as pip-audit above — this
+      # surfaces frontend vulnerabilities without blocking merges until
+      # there's a deliberate pass to address them.
+      - name: Audit dependencies
+        continue-on-error: true
+        run: npm audit --audit-level=high
+
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

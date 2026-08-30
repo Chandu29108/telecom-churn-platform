@@ -1,0 +1,41 @@
+# Local development only. In production, backend -> Render, frontend -> Vercel,
+# and Render's managed Postgres replaces the `db` service below.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: churn_user
+      POSTGRES_PASSWORD: churn_pass
+      POSTGRES_DB: churn_db
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+
+  backend:
+    build: ./backend
+    ports: ["8000:8000"]
+    environment:
+      DATABASE_URL: postgresql+psycopg2://churn_user:churn_pass@db:5432/churn_db
+      CORS_ORIGINS: http://localhost:5173
+      ENVIRONMENT: development
+      # Dev-only placeholder — main.py refuses to boot with this value when
+      # ENVIRONMENT=production, so this is safe to commit for local use.
+      SECRET_KEY: dev-secret-change-me-before-deploying
+      LLM_PROVIDER: ollama
+      # host.docker.internal lets the backend container reach Ollama running
+      # on your host machine (Docker Desktop on Mac/Windows). On Linux, add
+      # `extra_hosts: ["host.docker.internal:host-gateway"]` to this service,
+      # or run Ollama as its own compose service and point this at it instead.
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: llama3.1
+    depends_on: [db]
+    volumes: ["./backend/app:/app/app"]
+
+  frontend:
+    build:
+      context: ./frontend
+      args: { VITE_API_BASE_URL: "http://localhost:8000" }
+    ports: ["5173:80"]
+    depends_on: [backend]
+
+volumes:
+  pgdata:

@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body { @apply bg-surface text-ink font-sans antialiased; }
+
+/* Signature element: ascending "signal bars" mark — ties directly to the
+   telecom subject and doubles as a loading/brand mark across the app. */
+.signal-mark { display: inline-flex; align-items: flex-end; gap: 2px; height: 16px; }
+.signal-mark span { width: 3px; background: currentColor; border-radius: 1px; display: block; }
+.signal-mark span:nth-child(1) { height: 30%; }
+.signal-mark span:nth-child(2) { height: 55%; }
+.signal-mark span:nth-child(3) { height: 78%; }
+.signal-mark span:nth-child(4) { height: 100%; }
+
+.kpi-value { @apply font-mono font-semibold tabular-nums; }
