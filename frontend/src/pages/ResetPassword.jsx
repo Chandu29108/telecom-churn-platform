@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { resetPassword } from '../api'
+import PasswordInput from '../components/PasswordInput'
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams()
@@ -53,10 +54,9 @@ export default function ResetPassword() {
           <form onSubmit={submit} className="space-y-4">
             <label className="text-sm block">
               <span className="block text-xs font-medium text-muted mb-1">New password (min 8 characters)</span>
-              <input
-                type="password" required minLength={8} value={password}
+              <PasswordInput
+                required minLength={8} value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-signal"
               />
             </label>
 

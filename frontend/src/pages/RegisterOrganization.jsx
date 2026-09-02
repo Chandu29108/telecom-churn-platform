@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Loader2, Building2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import PasswordInput from '../components/PasswordInput'
 
 export default function RegisterOrganization() {
   const { register } = useAuth()
@@ -75,8 +76,7 @@ export default function RegisterOrganization() {
           </label>
           <label className="text-sm block">
             <span className="block text-xs font-medium text-muted mb-1">Password (min 8 characters)</span>
-            <input type="password" required minLength={8} value={form.password} onChange={(e) => update('password', e.target.value)}
-              className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-signal" />
+            <PasswordInput required minLength={8} value={form.password} onChange={(e) => update('password', e.target.value)} />
           </label>
 
           {error && <div className="text-sm text-tier-critical bg-tier-critical/10 rounded-lg px-3 py-2">{error}</div>}

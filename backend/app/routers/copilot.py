@@ -71,11 +71,18 @@ def ask(
         answer = provider.chat(SYSTEM_PROMPT, user_prompt)
     except Exception as e:
         logger.warning("copilot provider=%s failed: %s", provider.name, e)
-        raise HTTPException(
-            503,
-            f"The copilot's local LLM isn't reachable right now ({e}). "
-            f"Make sure Ollama is running (`ollama serve`) and the model is "
-            f"pulled (`ollama pull llama3.1`), then try again.",
-        )
+        if provider.name == "ollama":
+            detail = (
+                f"The copilot's local LLM isn't reachable right now ({e}). "
+                f"Make sure Ollama is running (`ollama serve`) and the model is "
+                f"pulled (`ollama pull llama3.1`), then try again."
+            )
+        else:
+            detail = (
+                f"The copilot's LLM provider ({provider.name}) isn't reachable "
+                f"right now ({e}). Check OPENAI_API_KEY / OPENAI_BASE_URL / "
+                f"OPENAI_MODEL, then try again."
+            )
+        raise HTTPException(503, detail)
 
     return CopilotResponse(run_id=run.id, answer=answer, provider=provider.name)

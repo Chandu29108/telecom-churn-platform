@@ -1,4 +1,6 @@
-fastapi==0.115.0
+fastapi==0.133.0                   # bumped from 0.115.0 — pulls in starlette>=1.0.1, which fixes
+                                    # CVE-2026-48710 ("BadHost"), a Host-header auth-bypass disclosed
+                                    # May 2026 affecting nearly all FastAPI apps below this line.
 uvicorn[standard]==0.30.6
 pandas==2.2.2
 numpy==1.26.4
@@ -7,12 +9,18 @@ scipy==1.13.1
 joblib==1.4.2
 sqlalchemy==2.0.32
 psycopg2-binary==2.9.9
-python-multipart==0.0.9
+python-multipart==0.0.32           # bumped from 0.0.9 — fixes several known DoS/parsing CVEs
 pydantic==2.8.2
-python-dotenv==1.0.1
+python-dotenv==1.2.2               # bumped from 1.0.1 — fixes PYSEC-2026-2270
 
 # --- Added for v2: auth, explainability, copilot, hardening ---
-python-jose[cryptography]==3.3.0   # JWT issuing/verification
+python-jose[cryptography]==3.4.0   # bumped from 3.3.0 — fixes CVE-2024-33663 (algorithm confusion)
+                                    # and CVE-2024-33664 ("JWT bomb" DoS). python-jose is only
+                                    # lightly maintained upstream; if either the copilot's LLM SDK
+                                    # or another dependency later forces a conflicting pin, migrating
+                                    # the two call sites in app/security.py to PyJWT (actively
+                                    # maintained, near-identical API) is the documented path — see
+                                    # https://github.com/jpadilla/pyjwt/issues/942.
 passlib[bcrypt]==1.7.4             # password hashing
 # Pinned explicitly: passlib 1.7.4's internal bcrypt self-test crashes
 # against bcrypt>=4.1 ("password cannot be longer than 72 bytes") due to a
@@ -27,5 +35,5 @@ boto3==1.34.162                    # Cloudflare R2 (S3-compatible) model storage
                                     # Only used if R2_* env vars are set; local dev works without R2 configured.
 
 # --- Added for Phase 2: observability ---
-# sentry-sdk==2.14.0                # Uncomment + install to enable error tracking. Only initialized if
-                                    # SENTRY_DSN is set (see app/config.py) — optional, not required to run.
+sentry-sdk[fastapi]==2.68.1        # Only initialized if SENTRY_DSN is set (see app/config.py) — no-op
+                                    # without it, so local dev/CI never need a Sentry account.

@@ -11,7 +11,10 @@ from slowapi.util import get_remote_address
 from slowapi import Limiter
 
 from .database import engine, Base, SessionLocal
-from .config import CORS_ORIGINS, SECRET_KEY, ENVIRONMENT, RATE_LIMIT_DEFAULT, SENTRY_DSN
+from .config import (
+    CORS_ORIGINS, SECRET_KEY, ENVIRONMENT, RATE_LIMIT_DEFAULT, SENTRY_DSN,
+    LLM_PROVIDER, R2_BUCKET_NAME, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
+)
 from .routers import analysis, prediction, auth, copilot, audit
 from .logging_config import configure_logging
 
@@ -24,7 +27,13 @@ logger = logging.getLogger("churn_platform")
 
 # Sentry — optional, config-driven (same pattern as R2/LLM-provider): only
 # initialized if SENTRY_DSN is set, so local dev/CI never need an account.
-if SENTRY_DSN:
+# Explicitly excluded for ENVIRONMENT=test regardless of SENTRY_DSN, since
+# .env is loaded the same way whether you run `uvicorn` or `pytest` — a
+# real DSN sitting in .env for local manual testing would otherwise mean
+# every pytest run reports its own deliberately-thrown test exceptions
+# (test_error_handling.py, test_upload_hardening.py, etc.) to Sentry as
+# if they were real production incidents.
+if SENTRY_DSN and ENVIRONMENT != "test":
     try:
         import sentry_sdk
         sentry_sdk.init(dsn=SENTRY_DSN, environment=ENVIRONMENT, traces_sample_rate=0.1)
@@ -40,6 +49,31 @@ if ENVIRONMENT == "production" and SECRET_KEY == "dev-secret-change-me-before-de
         "Refusing to start: SECRET_KEY is still the default dev value. "
         "Set a real, random SECRET_KEY environment variable before deploying to production "
         "(e.g. `python -c \"import secrets; print(secrets.token_hex(32))\"`)."
+    )
+
+# These two are warnings, not hard failures like SECRET_KEY above — the
+# app still functions without them (the copilot feature just returns a
+# 503 per-request; model storage falls back to local disk). But both are
+# easy to forget and fail silently otherwise, so make them loud and
+# specific at boot rather than a bad surprise after the first redeploy.
+if ENVIRONMENT == "production" and LLM_PROVIDER == "ollama":
+    logger.warning(
+        "startup.config_warning LLM_PROVIDER=ollama in production — Ollama has no "
+        "managed equivalent on Render and the copilot feature will fail on every "
+        "request. Set LLM_PROVIDER=openai with OPENAI_API_KEY (and optionally "
+        "OPENAI_BASE_URL/OPENAI_MODEL) to use an OpenAI-compatible provider such as "
+        "Groq instead."
+    )
+
+if ENVIRONMENT == "production" and not (
+    R2_BUCKET_NAME and R2_ACCOUNT_ID and R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY
+):
+    logger.warning(
+        "startup.config_warning Cloudflare R2 is not configured in production — trained "
+        "models are being written to local disk, which is EPHEMERAL on Render's web "
+        "service and will be lost on the next redeploy/restart. Set R2_BUCKET_NAME, "
+        "R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY to persist models "
+        "to object storage instead."
     )
 
 # Dev-only convenience: creates tables on startup if they don't exist yet,
@@ -99,6 +133,30 @@ async def add_request_id(request: Request, call_next):
     request.state.request_id = request_id
     response = await call_next(request)
     response.headers["X-Request-ID"] = request_id
+    return response
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Baseline hardening headers (production-readiness audit, Phase 5).
+    This is a pure JSON API consumed by a separate frontend origin, so
+    these can be strict — there's no first-party HTML page here that
+    needs relaxed rules, except /docs and /redoc, which are only ever
+    enabled outside production (see the FastAPI() constructor above) and
+    are therefore excluded from the strict CSP below."""
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    # Only meaningful over HTTPS, which is how Render terminates TLS in
+    # front of the app — harmless but pointless to send over local HTTP.
+    if ENVIRONMENT == "production":
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+        # default-src 'none': correct for a pure JSON API with no HTML
+        # views to render. Swagger/ReDoc are disabled in production (see
+        # docs_url=None above), so there's no in-app page that needs a
+        # more permissive policy to load its own JS/CSS.
+        response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
     return response
 
 
@@ -194,3 +252,14 @@ def ready():
     except Exception:
         logger.exception("readiness_check_failed")
         return JSONResponse(status_code=503, content={"status": "not_ready"})
+
+
+if ENVIRONMENT != "production":
+    @app.get("/api/debug/sentry-test")
+    def sentry_test():
+        """Deliberately throws, so you can confirm Sentry is actually
+        receiving events end-to-end (not just that sentry_sdk.init() ran
+        without error) — see the production-readiness audit, Phase 7.
+        Only registered outside production; doesn't exist at all on a
+        production deploy, so there's no route to probe/abuse there."""
+        raise RuntimeError("This is a deliberate test error for Sentry verification.")

@@ -65,6 +65,18 @@ LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1")
 
+# OpenAI-compatible provider (see app/llm/openai_compatible_provider.py) —
+# works with OpenAI itself or any provider implementing the same API shape
+# (Groq, Together, Fireworks, OpenRouter). Set LLM_PROVIDER=openai and
+# these three to use it; OPENAI_BASE_URL defaults to Groq (free tier, no
+# credit card to start) since Ollama has no equivalent on Render — see
+# the production-readiness audit, Phase 3. gpt-oss-20b is Groq's current
+# recommended fast/free-tier model as of their June 2026 deprecation of
+# the old llama-3.1-8b-instant / llama-3.3-70b-versatile names.
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.groq.com/openai/v1")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "openai/gpt-oss-20b")
+
 # --------------------------------------------------------------------------- #
 # Rate limiting (slowapi / limits syntax, e.g. "60/minute")
 # --------------------------------------------------------------------------- #

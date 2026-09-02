@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import PasswordInput from '../components/PasswordInput'
 
 export default function Login() {
   const { login } = useAuth()
@@ -41,9 +42,8 @@ export default function Login() {
           </label>
           <label className="text-sm block">
             <span className="block text-xs font-medium text-muted mb-1">Password</span>
-            <input
-              type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-signal"
+            <PasswordInput
+              required value={password} onChange={(e) => setPassword(e.target.value)}
             />
           </label>
           <div className="text-right -mt-2">
