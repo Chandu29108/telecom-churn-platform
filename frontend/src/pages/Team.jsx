@@ -2,9 +2,10 @@
 // the old "register with the same org name" behaviour, which let anyone
 // who knew an org's name join it — see backend routers/auth.py.
 import { useEffect, useState } from 'react'
-import { Loader2, Copy, Check, ShieldAlert } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
+import { Loader2, Copy, Check, ShieldAlert, CreditCard, Sparkles } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { createInvite, listInvites } from '../api'
+import { createInvite, listInvites, getBillingStatus, createCheckout } from '../api'
 
 export default function Team() {
   const { user } = useAuth()
@@ -13,6 +14,36 @@ export default function Team() {
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState(null)
   const [copiedId, setCopiedId] = useState(null)
+  const [searchParams] = useSearchParams()
+  const [billing, setBilling] = useState(null)
+  const [billingLoading, setBillingLoading] = useState(true)
+  const [upgrading, setUpgrading] = useState(false)
+  const [billingError, setBillingError] = useState(null)
+  const justUpgraded = searchParams.get('upgraded') === 'true'
+
+  const refreshBilling = () => {
+    setBillingLoading(true)
+    getBillingStatus()
+      .then((res) => setBilling(res.data))
+      .catch(() => {}) // non-critical — page still works if this fails
+      .finally(() => setBillingLoading(false))
+  }
+
+  useEffect(() => {
+    if (user?.role === 'owner' && user?.account_type !== 'personal') refreshBilling()
+  }, [user])
+
+  const handleUpgrade = async () => {
+    setUpgrading(true)
+    setBillingError(null)
+    try {
+      const res = await createCheckout()
+      window.location.href = res.data.checkout_url
+    } catch (err) {
+      setBillingError(err.response?.data?.detail || 'Could not start checkout.')
+      setUpgrading(false)
+    }
+  }
 
   const refresh = () => {
     setLoading(true)
@@ -67,6 +98,43 @@ export default function Team() {
 
   return (
     <div className="max-w-2xl">
+      <div className="mb-10">
+        <div className="font-semibold text-lg mb-1">Billing</div>
+        <div className="text-xs text-muted mb-4">
+          Pro unlocks higher upload limits, more seats, and priority copilot access.
+        </div>
+
+        {justUpgraded && (
+          <div className="flex items-center gap-2 text-sm text-signal bg-signal/10 rounded-lg px-3 py-2 mb-4">
+            <Sparkles size={16} /> Thanks! It can take a minute for your Pro plan to activate — refresh if it doesn't show below right away.
+          </div>
+        )}
+
+        {billingError && (
+          <div className="text-sm text-tier-critical bg-tier-critical/10 rounded-lg px-3 py-2 mb-4">{billingError}</div>
+        )}
+
+        {billingLoading ? (
+          <div className="text-sm text-muted">Loading…</div>
+        ) : billing?.plan === 'pro' ? (
+          <div className="flex items-center gap-2 bg-card border border-black/5 rounded-xl px-4 py-3 text-sm">
+            <CreditCard size={16} className="text-signal" />
+            <span className="font-medium">You're on the Pro plan.</span>
+            {billing.subscription_status && (
+              <span className="text-muted">({billing.subscription_status})</span>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={handleUpgrade}
+            disabled={upgrading}
+            className="flex items-center gap-2 bg-ink text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-signal disabled:opacity-40"
+          >
+            {upgrading ? <><Loader2 className="animate-spin" size={16} /> Starting checkout…</> : 'Upgrade to Pro — $49/mo'}
+          </button>
+        )}
+      </div>
+
       <div className="font-semibold text-lg mb-1">Invite teammates</div>
       <div className="text-xs text-muted mb-6">
         Anyone with a valid, unused invite link can join your organization as a member. Links

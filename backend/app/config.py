@@ -155,6 +155,19 @@ RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
 EMAIL_FROM_ADDRESS = os.getenv("EMAIL_FROM_ADDRESS", "no-reply@yourdomain.example")
 # Used to build links inside emails (e.g. https://app.yourdomain.com/verify-email?token=...).
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
+# Billing (Lemon Squeezy — chosen over Stripe because Stripe is invite-only
+# for India-based accounts; Lemon Squeezy is a Merchant of Record, so it
+# also handles global sales-tax/VAT/GST compliance rather than leaving
+# that to us). All four are required for the billing endpoints to work;
+# unset in local dev is fine — checkout/webhook just aren't exercised.
+LEMON_SQUEEZY_API_KEY = os.getenv("LEMON_SQUEEZY_API_KEY", "")
+LEMON_SQUEEZY_STORE_ID = os.getenv("LEMON_SQUEEZY_STORE_ID", "")
+LEMON_SQUEEZY_PRO_VARIANT_ID = os.getenv("LEMON_SQUEEZY_PRO_VARIANT_ID", "")
+# Set when creating the webhook in the Lemon Squeezy dashboard (Settings >
+# Webhooks) — used to verify incoming webhook payloads are genuinely from
+# Lemon Squeezy (HMAC-SHA256 over the raw body) rather than forged.
+LEMON_SQUEEZY_WEBHOOK_SECRET = os.getenv("LEMON_SQUEEZY_WEBHOOK_SECRET", "")
 EMAIL_VERIFICATION_EXPIRE_HOURS = int(os.getenv("EMAIL_VERIFICATION_EXPIRE_HOURS", "24"))
 PASSWORD_RESET_EXPIRE_MINUTES = int(os.getenv("PASSWORD_RESET_EXPIRE_MINUTES", "30"))
 

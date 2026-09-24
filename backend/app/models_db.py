@@ -65,6 +65,17 @@ class Organization(Base):
     max_seats = Column(Integer, nullable=True)
     max_upload_rows = Column(Integer, nullable=True)
 
+    # Billing (Lemon Squeezy). "free" is every org's default and the only
+    # value that existed before this was added — see alembic 0007.
+    # Nullable customer/subscription IDs because a free-plan org has
+    # neither yet; subscription_status mirrors Lemon Squeezy's own
+    # vocabulary as-is rather than a re-mapped enum (see the migration's
+    # docstring for why).
+    plan = Column(String, nullable=False, default="free")
+    lemon_squeezy_customer_id = Column(String, nullable=True)
+    lemon_squeezy_subscription_id = Column(String, nullable=True)
+    subscription_status = Column(String, nullable=True)
+
     users = relationship("User", back_populates="org")
     runs = relationship("AnalysisRun", back_populates="org")
 

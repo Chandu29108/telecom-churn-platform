@@ -15,7 +15,7 @@ from .config import (
     CORS_ORIGINS, SECRET_KEY, ENVIRONMENT, RATE_LIMIT_DEFAULT, SENTRY_DSN,
     LLM_PROVIDER, R2_BUCKET_NAME, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
 )
-from .routers import analysis, prediction, auth, copilot, audit
+from .routers import analysis, prediction, auth, copilot, audit, billing
 from .logging_config import configure_logging
 
 # noqa: F401 — imported so Base.metadata sees every model when
@@ -122,6 +122,7 @@ app.include_router(analysis.router)
 app.include_router(prediction.router)
 app.include_router(copilot.router)
 app.include_router(audit.router)
+app.include_router(billing.router)
 
 
 @app.middleware("http")

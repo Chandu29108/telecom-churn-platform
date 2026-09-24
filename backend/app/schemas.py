@@ -80,6 +80,15 @@ class ResetPasswordRequest(BaseModel):
     new_password: str = Field(min_length=8)
 
 
+class CheckoutOut(BaseModel):
+    checkout_url: str
+
+
+class BillingStatusOut(BaseModel):
+    plan: str
+    subscription_status: Optional[str] = None
+
+
 class AuditLogOut(BaseModel):
     id: int
     user_id: Optional[int]

@@ -110,6 +110,10 @@ export const createInvite = (expiresHours = 168) =>
   api.post('/api/auth/invites', { expires_hours: expiresHours })
 export const listInvites = () => api.get('/api/auth/invites')
 
+// --- Billing (owner-only checkout; status readable by any member) --------- //
+export const getBillingStatus = () => api.get('/api/billing/status')
+export const createCheckout = () => api.post('/api/billing/checkout')
+
 // --- Audit log (owner only) ----------------------------------------------- //
 export const listAuditLogs = (params = {}) => api.get('/api/audit', { params })
 
