@@ -19,8 +19,15 @@ export default function Sidebar() {
   // accounts are single-seat by definition (server rejects invite
   // creation there — see POST /api/auth/invites), so the link is hidden
   // rather than shown-then-erroring.
-  const links = (user?.role === 'owner' && user?.account_type !== 'personal')
-    ? [...baseLinks, { to: '/team', label: 'Invite Team', icon: Users }]
+  // Billing (Pro upgrade) applies to personal AND org accounts, since the
+  // free-tier caps apply to both — so every owner gets this link. The page
+  // itself hides the invite section for personal accounts.
+  const links = user?.role === 'owner'
+    ? [...baseLinks, {
+        to: '/team',
+        label: user?.account_type === 'personal' ? 'Billing' : 'Team & Billing',
+        icon: Users,
+      }]
     : baseLinks
 
   const handleLogout = async () => {
